@@ -146,16 +146,11 @@ def visualize_moves(moves)
 end
 
 def solve(field, prev_moves = [], prev_fields = [])
-  #puts "PREV_MOVES: #{prev_moves.inspect};"
-  #puts "#{visualize_field field}" #; PREV_FIELDS: #{prev_fields.inspect}"
-
   return nil if prev_fields.include? field
-
   return prev_moves if solved?(field)
 
   moves = all_possible_moves(field)
 
-  # new_prev_fields = prev_fields + [field]
   prev_fields << field
 
   moves.each do |move|
@@ -167,25 +162,4 @@ def solve(field, prev_moves = [], prev_fields = [])
   nil
 end
 
-# C(down 1) vs A
-# puts car_overlap?({pos: {x: 4, y: 1}, len: 3, dir: :v}, {pos: {x: 4, y: 1}, len: 2, dir: :h})
-
-# A vs C(down 2)
-# puts car_overlap?({pos: {x: 4, y: 0}, len: 3, dir: :v}, {pos: {x: 4, y: 1}, len: 2, dir: :h})
-
-# possible moves for car C
-# puts possible_moves(field[2], field).inspect
-# puts possible_moves(field[0], field).inspect
-
-# puts "BEFORE: #{field.inspect}"
-# field2 = apply_move(field, {car: field[0], dir: :right, d: 1})
-# puts "RESULT: #{field2.inspect}"
-# puts "AFTER: #{field.inspect}"
-
-# puts possible_moves(field[1], field).inspect
-# puts apply_move(field, {:car=>{:id=>"A", :pos=>{:x=>4, :y=>1}, :len=>2, :dir=>:h}, :dir=>:left, :d=>2}).inspect
-
-# puts solve([{id: 'X', pos: {x: 0, y: 3}, len: 2, dir: :h}, {id: 'A', pos: {x: 4, y: 1}, len: 2, dir: :v}]).inspect
-
 puts visualize_moves(solve(field))
-# puts visualize_field(field)
