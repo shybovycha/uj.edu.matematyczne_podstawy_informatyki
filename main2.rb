@@ -9,22 +9,6 @@ def point_overlap?(p, car)
       (car[:dir] == :h and p[:y] == car[:pos][:y] and p[:x] >= car[:pos][:x] and p[:x] <= car[:pos][:x] + car[:len] - 1)
 end
 
-def car_overlap?(car1, car2)
-  x, y, l = car1[:pos][:x], car1[:pos][:y], car1[:len]
-
-  if car1[:dir] == :v
-    y.upto(y + l) do |py|
-      return true if point_overlap?({x: x, y: py}, car2)
-    end
-  else
-    x.upto(x + l) do |px|
-      return true if point_overlap?({x: px, y: y}, car2)
-    end
-  end
-
-  false
-end
-
 def possible_moves(car, field)
   other_cars = field.reject { |c| c == car }
   moves = []
@@ -110,31 +94,6 @@ def all_possible_moves(field)
   end
 
   field.inject([]) { |acc, car| acc += possible_moves(car, field) }
-end
-
-def visualize_field(field)
-  cells = []
-
-  6.times { cells << [' '] * 6 }
-
-  field.each do |car|
-    if car[:dir] == :h
-      car[:pos][:x].upto(car[:pos][:x] + car[:len] - 1) { |x| cells[car[:pos][:y]][x] = car[:id] }
-    else
-      car[:pos][:y].upto(car[:pos][:y] + car[:len] - 1) { |y| cells[y][car[:pos][:x]] = car[:id] }
-    end
-  end
-
-  lines = []
-
-  lines << '+' + (['-'] * 6).join('+') + '+'
-
-  cells.each do |row|
-    lines << '|' + row.join('|') + '|'
-    lines << '+' + (['-'] * 6).join('+') + '+'
-  end
-
-  lines.reverse.join("\n")
 end
 
 def visualize_moves(moves)
