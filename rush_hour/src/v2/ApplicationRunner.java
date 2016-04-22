@@ -3,260 +3,243 @@ package v2;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 class Point {
-    public int x, y;
+  public int x, y;
 
-    public Point(int x, int y) {
-        this.x = x;
-        this.y = y;
-    }
+  public Point(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
 
-    public Point subtract(Point other) {
-        return new Point(this.x - other.x, this.y - other.y);
-    }
+  public Point subtract(Point other) {
+    return new Point(this.x - other.x, this.y - other.y);
+  }
 
-    public int length() {
-        return (int) Math.round(Math.sqrt(this.x * this.x - this.y * this.y));
-    }
+  public int length() {
+    return (int) Math.round(Math.sqrt(this.x * this.x - this.y * this.y));
+  }
+  
+  @Override
+  public String toString() {
+    return String.format("(%d, %d)", this.x, this.y);
+  }
 }
 
 class Car {
-    public Point pos;
-    public int length;
-    public char direction, id;
-    // public Point target;
-    public boolean visited = false;
+  public Point pos;
+  public int len;
+  public char dir, id;
 
-    public Car(char id, int x, int y, char direction, int length) {
-        this.id = id;
-        this.pos = new Point(x, y);
-        this.length = length;
-        this.direction = direction;
-    }
+  public Car(char id, int x, int y, char direction, int length) {
+    this.id = id;
+    this.pos = new Point(x, y);
+    this.len = length;
+    this.dir = direction;
+  }
 
-    public boolean checkCollision(Point p) {
-        if (this.direction == 'V') {
-            return (this.pos.x == p.x) && (p.y >= this.pos.y) && (p.y <= this.pos.y + this.length);
-        } else if (this.direction == 'H') {
-            return (this.pos.y == p.y) && (p.x >= this.pos.x) && (p.x <= this.pos.x + this.length);
-        }
-
-        return false;
-    }
+  public boolean checkCollision(Point p) {
+    return (dir == 'V' && p.x == pos.x && p.y >= pos.y && p.y <= pos.y + len - 1) ||
+        (dir == 'H' && p.y == pos.y && p.x >= pos.x && p.x <= pos.x + len - 1);
+  }
+  
+  public Car dup() {
+    return new Car(this.id, this.pos.x, this.pos.y, this.dir, this.len);
+  }
+  
+  public Car move(Move move) {
+    Car newCar = this.dup();
+    
+    if (move.dir == 'D')
+      newCar.pos.y -= move.d;
+    
+    if (move.dir == 'U')
+      newCar.pos.y += move.d;
+    
+    if (move.dir == 'L')
+      newCar.pos.x -= move.d;
+    
+    if (move.dir == 'R')
+      newCar.pos.x += move.d;
+    
+    return newCar;
+  }
+  
+  @Override
+  public String toString() {
+    return String.format("%c [%c] %s", this.id, this.dir, this.pos.toString());
+  }
 }
 
-abstract class SolutionStepAlgorithm {
-    public Car car;
-    public Field field;
-    public Point target;
-
-    protected Point direction;
-    protected Point start;
-    protected List<Car> obstacles;
-
-    public SolutionStepAlgorithm(Car car, Field field, Point target) {
-        this.car = car;
-        this.field = field;
-        this.target = target;
-        this.start = new Point(car.pos.x, car.pos.y);
-        this.direction = null;
-    }
-
-    protected abstract void findMoveDirection();
-
-    protected abstract void findObstacles();
-
-    public Point getMoveDirection() {
-        if (this.direction == null) this.findMoveDirection();
-
-        return this.direction;
-    }
-
-    public List<Car> getObstacles() {
-        if (this.obstacles == null) this.findObstacles();
-
-        return this.obstacles;
-    }
-
-    protected String formatMove() {
-        char moveDir = '?';
-
-        if (this.direction.x > 0) moveDir = 'R';
-        else if (this.direction.x < 0) moveDir = 'L';
-        else if (this.direction.y < 0) moveDir = 'D';
-        else if (this.direction.y > 0) moveDir = 'U';
-
-        int moveLen = this.target.subtract(this.start).length();
-
-        return String.format("%c %c %d", this.car.id, moveDir, moveLen);
-    }
-
-    // TODO: IMPLEMENT!
-    public Point getNewTargetFor(Car obstacle) throws Exception {
-        if (obstacle.direction == this.car.direction)
-            throw new Exception("Endless loop - obstacle could not be moved so that car can pass");
-
-        if (obstacle.direction == 'V') {
-            List<Point> candidates =
-                    Arrays.asList(
-                            new Point(obstacle.pos.x, this.car.pos.y + 1 - obstacle.pos.y + 1),
-                            new Point(obstacle.pos.x, this.car.pos.y + 1 - obstacle.pos.y - obstacle.length + 1),
-                            new Point(obstacle.pos.x, this.car.pos.y - 1 - obstacle.pos.y + 1),
-                            new Point(obstacle.pos.x, this.car.pos.y - 1 - obstacle.pos.y - obstacle.length + 1));
-
-            return candidates
-                    .stream()
-                    .sorted((c1, c2) -> c1.length() - c2.length())
-                    .filter(c -> c.y > -1 && c.y < 6)
-                    .findFirst()
-                    .get();
-        } else {
-            List<Point> candidates =
-                    Arrays.asList(
-                            new Point(this.car.pos.x + 1 - obstacle.pos.x, obstacle.pos.y + 1),
-                            new Point(this.car.pos.x + 1 - obstacle.pos.x - obstacle.length + 1, obstacle.pos.y),
-                            new Point(this.car.pos.x - 1 - obstacle.pos.x, obstacle.pos.y + 1),
-                            new Point(this.car.pos.x - 1 - obstacle.pos.x - obstacle.length + 1, obstacle.pos.y));
-
-            return candidates
-                    .stream()
-                    .sorted((c1, c2) -> c1.length() - c2.length())
-                    .filter(c -> c.x > -1 && c.x < 6)
-                    .findFirst()
-                    .get();
-        }
-    }
-}
-
-class VerticalSolutionStep extends SolutionStepAlgorithm {
-    public VerticalSolutionStep(Car car, Field field, Point target) {
-        super(car, field, target);
-    }
-
-    @Override
-    protected void findMoveDirection() {
-        this.direction = new Point(0, 0);
-
-        int dy1 = target.y - car.pos.y;
-        int dy2 = target.y - (car.pos.y + car.length - 1);
-        int dy;
-
-        // worth checking, if the new position will overlap with the given one
-        if (dy1 < dy2) {
-            dy = dy1;
-        } else {
-            dy = dy2;
-            this.start.y += car.length - 1;
-        }
-
-        this.direction.y = dy / Math.abs(dy);
-    }
-
-    @Override
-    protected void findObstacles() {
-        this.obstacles = new ArrayList<>();
-
-        for (int y = this.start.y; y > -1 && y < 6; y += this.getMoveDirection().y) {
-            for (Car c : this.field.cars) {
-                if (c == this.car) continue;
-
-                if (c.checkCollision(new Point(this.car.pos.x, this.car.pos.y + y))) {
-                    this.obstacles.add(c);
-                }
-            }
-        }
-    }
-}
-
-class HorizontalSolutionStep extends SolutionStepAlgorithm {
-    public HorizontalSolutionStep(Car car, Field field, Point target) {
-        super(car, field, target);
-    }
-
-    @Override
-    protected void findMoveDirection() {
-        this.direction = new Point(0, 0);
-
-        int dx1 = target.x - car.pos.x;
-        int dx2 = target.x - (car.pos.x + car.length - 1);
-        int dx;
-
-        if (dx1 < dx2) {
-            dx = dx1;
-        } else {
-            dx = dx2;
-            this.start.x += car.length - 1;
-        }
-
-        this.direction.x = dx / Math.abs(dx);
-    }
-
-    @Override
-    protected void findObstacles() {
-        this.obstacles = new ArrayList<>();
-
-        for (int x = this.start.x; x > -1 && x < 6; x += this.getMoveDirection().x) {
-            for (Car c : this.field.cars) {
-                if (c == this.car) continue;
-
-                if (c.checkCollision(new Point(this.car.pos.x + x, this.car.pos.y))) {
-                    this.obstacles.add(c);
-                }
-            }
-        }
-    }
+class Move {
+  public Car car;
+  public char dir;
+  public int d;
+  
+  public Move(Car car, char direction, int distance) {
+    this.car = car;
+    this.dir = direction;
+    this.d = distance;
+  }
+  
+  @Override
+  public String toString() {
+    return String.format("%c %c %d", this.car.id, this.dir, this.d);
+  }
 }
 
 class Field {
-    public List<Car> cars;
+  public List<Car> cars;
+  
+  public Field(List<Car> cars) {
+    this.cars = new ArrayList<>();
+    this.cars.addAll(cars);
+  }
+  
+  public List<Move> possibleMoves(Car car) {
+    List<Car> otherCars = this.cars.stream().filter(c -> c.id != car.id).collect(Collectors.toList());
+    List<Move> moves = new ArrayList<>();
+    
+    if (car.dir == 'V') {
+      for (int py = car.pos.y; py > -1; --py) {
+        Point p = new Point(car.pos.x, py);
+        
+        if (otherCars.stream().anyMatch(c -> c.checkCollision(p)))
+          break;
+        
+        moves.add(new Move(car, 'D', car.pos.y - py));
+      }
+      
+      for (int py = car.pos.y + car.len; py < 6; ++py) {
+        Point p = new Point(car.pos.x, py);
 
-    public Field(List<Car> cars) {
-        this.cars = cars;
+        if (otherCars.stream().anyMatch(c -> c.checkCollision(p)))
+          break;
+        
+        moves.add(new Move(car, 'U', py - car.pos.y - car.len + 1));
+      }
+    } else {
+      for (int px = car.pos.x - 1; px > -1; --px) {
+        Point p = new Point(px, car.pos.y);
+        
+        if (otherCars.stream().anyMatch(c -> c.checkCollision(p)))
+          break;
+        
+        moves.add(new Move(car, 'L', car.pos.x - px));
+      }
+      
+      for (int px = car.pos.x + car.len; px < 6; ++px) {
+        Point p = new Point(px, car.pos.y);
+        
+        if (otherCars.stream().anyMatch(c -> c.checkCollision(p)))
+          break;
+        
+        moves.add(new Move(car, 'R', px - car.pos.x - car.len + 1));
+      }
     }
-
-    protected boolean checkCollision(Point p) {
-        for (Car c : this.cars) {
-            if (c.checkCollision(p)) return true;
-        }
-
-        return false;
+    
+    return moves;
+  }
+  
+  public Field applyMove(Move move) {
+    return new Field(this.cars.stream().map(c -> (c.id == move.car.id) ? c.move(move) : c.dup()).collect(Collectors.toList()));
+    
+    /*
+    List<Car> newCars = new ArrayList<>();
+    
+    for (Car c : this.cars) {
+      if (c.id != move.car.id)
+        newCars.add(c.dup()); else
+          newCars.add(c.move(move));
     }
-
-    public List<String> moveCar(Car car, Point target, List<String> moves) throws Exception {
-        if (car.visited) return moves;
-
-        SolutionStepAlgorithm solver;
-
-        if (car.direction == 'V') {
-            solver = new VerticalSolutionStep(car, this, target);
-        } else {
-            solver = new HorizontalSolutionStep(car, this, target);
+    
+    return new Field(newCars);*/
+  }
+  
+  protected Car getXCar() {
+    return this.cars.stream().filter(c -> c.id == 'X').findFirst().get();
+  }
+  
+  public boolean isSolved() {
+    return getXCar().checkCollision(new Point(5, 3));
+  }
+  
+  public boolean isAnyOverlap(Point p) {
+    return this.cars.stream().anyMatch(c -> c.checkCollision(p));
+  }
+  
+  public List<Move> allPossibleMoves() {
+      Car xCar = this.getXCar();
+      
+      if (xCar.dir == 'H') {
+        if (IntStream.range(xCar.pos.x + xCar.len, 6).noneMatch(x -> this.isAnyOverlap(new Point(x, 3)))) {
+          return Arrays.asList(new Move(xCar, 'R', 5 - xCar.pos.x - xCar.len + 1));
         }
-
-        // solver.getMoveDirection();
-        List<Car> obstacles = solver.getObstacles();
-
-        moves.add(solver.formatMove());
-
-        car.visited = true;
-
-        for (Car c : obstacles) {
-            Point newTarget = solver.getNewTargetFor(c);
-            this.moveCar(c, newTarget, moves);
-        }
-
-        return moves;
-    }
+      } else {
+        if (xCar.pos.y > 3 && xCar.len == 1 && !this.isAnyOverlap(new Point(5, 4))) 
+          return Arrays.asList(new Move(xCar, 'U', 2));
+        else if (xCar.pos.y < 3 && IntStream.range(xCar.pos.y + xCar.len, 4).noneMatch(y -> this.isAnyOverlap(new Point(5, y))))
+          return Arrays.asList(new Move(xCar, 'D', 3 - xCar.pos.y - xCar.len + 1));
+      }
+      
+      return this.cars.stream().map(car -> this.possibleMoves(car)).flatMap(l -> l.stream()).collect(Collectors.toList());
+  }
+  
+  @Override
+  public String toString() {
+    return this.cars.stream().map(Car::toString).collect(Collectors.joining(";"));
+  }
+  
+  @Override
+  public boolean equals(Object other) {
+    return (other != null) && (other instanceof Field) && (other.toString().equals(this.toString()));
+  }
 }
 
-public class ApplicationRunner {
-    public static void main(String[] args) throws Exception {
-        List<Car> cars =
-                Arrays.asList(
-                        new Car('X', 0, 3, 'H', 2), new Car('A', 4, 1, 'H', 2), new Car('C', 4, 1, 'V', 3));
-        Field field = new Field(cars);
-
-        List<String> moves = field.moveCar(cars.get(0), new Point(5, 2), new ArrayList<String>());
+class Solver {
+  public static List<Move> solve(Field field, List<Move> prevMoves, List<Field> prevFields) {
+    List<Move> result = new ArrayList<>();
+    
+    if (prevFields.contains(field))
+      return result;
+    
+    if (field.isSolved())
+      return prevMoves;
+    
+    List<Move> moves = field.allPossibleMoves();
+    prevFields.add(field);
+    
+    for (Move move : moves) {
+      List<Move> newMoves = new ArrayList<Move>();
+      newMoves.addAll(prevMoves);
+      newMoves.add(move);
+      
+      List<Move> ms = solve(field.applyMove(move), newMoves, prevFields);
+      
+      if (!ms.isEmpty())
+        return ms;
     }
+    
+    return result;
+  }
+  
+  public static List<Move> solve(Field field) {
+    return solve(field, new ArrayList<Move>(), new ArrayList<Field>());
+  }
+}
+
+public class Application {
+  public static void main(String[] args) throws Exception {
+    List<Car> cars =
+        Arrays.asList(
+            new Car('X', 0, 3, 'H', 2), new Car('A', 4, 1, 'H', 2), new Car('C', 4, 2, 'V', 3));
+    
+    Field field = new Field(cars);
+    
+    List<Move> moves = Solver.solve(field);
+    
+    System.out.printf(moves.stream().map(Move::toString).collect(Collectors.joining("\n")));
+  }
 }
